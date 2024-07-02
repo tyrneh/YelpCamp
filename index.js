@@ -7,6 +7,7 @@ if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
+const favicon = require('serve-favicon');
 const express = require('express');
 const app = express();
 const methodOverride = require('method-override');
@@ -62,6 +63,9 @@ app.engine('ejs', ejsMate);
 
 // serving static assets
 app.use(express.static(path.join(__dirname, 'public')));
+
+// favicon
+app.use(favicon(__dirname + '/public/imgs/favicon.png'));
 
 // using mongo to store session
 const store = MongoStore.create({
