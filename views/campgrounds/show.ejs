@@ -1,0 +1,175 @@
+<% layout('layout/boilerplate') %>
+<!-- link the css starability file. Don't have to specify the public folder as the app is configured to auto serve that folder -->
+<link rel="stylesheet" href="/css/star.css" />
+
+<!-- CAMPGROUND SECTION -->
+<div class="row">
+  <div class="col-6">
+    <!-- image carousel -->
+    <div id="carouselExample" class="carousel slide">
+      <div class="carousel-inner">
+        <% camp.images.forEach((image, idx) => { %>
+        <div class="carousel-item <%= idx === 0 ? 'active' : '' %>">
+          <img
+            src="<%= image.url %>"
+            class="d-block w-100"
+            alt=""
+            crossorigin="anonymous"
+          />
+        </div>
+        <% }) %>
+      </div>
+      <!-- don't display controls if there's only a single image -->
+      <% if(camp.images.length > 1) {%>
+      <button
+        class="carousel-control-prev"
+        type="button"
+        data-bs-target="#carouselExample"
+        data-bs-slide="prev"
+      >
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+      </button>
+      <button
+        class="carousel-control-next"
+        type="button"
+        data-bs-target="#carouselExample"
+        data-bs-slide="next"
+      >
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+      </button>
+      <% } %>
+    </div>
+    <div class="card mb-5">
+      <div class="card-body">
+        <h5 class="card-title"><%= camp.title %></h5>
+        <p class="card-text"><%= camp.location %></p>
+      </div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+          Submitted by: <%= camp.author.username %>
+        </li>
+        <li class="list-group-item"><%= camp.description %></li>
+        <li class="list-group-item">$<%= camp.price %></li>
+      </ul>
+      <!-- Hide the edit and delete buttons unless a user is signed in, AND the owner of the campground is the current user-->
+      <!-- remember that currentUser was set in app.use(), and stored in req.locals, which means req.locals doesn't need to be explicitly called -->
+      <% if(currentUser && camp.author.equals(currentUser._id)){ %>
+      <div class="card-body">
+        <a
+          href="/campgrounds/<%= camp._id %>/edit"
+          class="card-link btn btn-info"
+          >Edit</a
+        >
+        <form
+          class="d-inline"
+          action="/campgrounds/<%= camp._id %>?_method=DELETE"
+          method="POST"
+        >
+          <button class="btn btn-warning">DELETE</button>
+        </form>
+      </div>
+      <% } %>
+      <div class="card-footer text-body-secondary">
+        <a href="/campgrounds">Back to all campgrounds</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEWS SECTION -->
+  <div class="col-6">
+    <!-- mapbox map -->
+    <div id="map" style="width: 400px; height: 300px"></div>
+    <!-- Hide the ability to leave reveiws unless a user is logged in -->
+    <% if(!currentUser){ %>
+    <p class="mb-3">You must be logged in to leave a review!</p>
+    <% } else { %>
+    <h2>Leave a review</h2>
+    <form
+      action="/campgrounds/<%=camp._id%>/reviews"
+      method="POST"
+      class="mb-3 needs-validation"
+      novalidate
+    >
+      <!-- <div class="mb-3">
+        <label for="rating" class="form-label">Rating</label>
+        <input
+          type="range"
+          class="form-range"
+          min="1"
+          max="5"
+          name="review[rating]"
+          id="rating"
+        />
+      </div> -->
+      <!-- starability HTML code -->
+      <fieldset class="starability-heart mb-3">
+        <input
+          type="radio"
+          id="no-rate"
+          class="input-no-rate"
+          name="review[rating]"
+          value="1"
+          checked
+          aria-label="No rating."
+        />
+        <input type="radio" id="first-rate1" name="review[rating]" value="1" />
+        <label for="first-rate1" title="Terrible">1 star</label>
+        <input type="radio" id="first-rate2" name="review[rating]" value="2" />
+        <label for="first-rate2" title="Not good">2 stars</label>
+        <input type="radio" id="first-rate3" name="review[rating]" value="3" />
+        <label for="first-rate3" title="Average">3 stars</label>
+        <input type="radio" id="first-rate4" name="review[rating]" value="4" />
+        <label for="first-rate4" title="Very good">4 stars</label>
+        <input type="radio" id="first-rate5" name="review[rating]" value="5" />
+        <label for="first-rate5" title="Amazing">5 stars</label>
+      </fieldset>
+
+      <div class="mb-3">
+        <label for="review" class="form-label">Review</label>
+        <textarea
+          class="form-control"
+          name="review[body]"
+          id="body"
+          cols="30"
+          rows="5"
+          required
+        ></textarea>
+        <div class="valid-feedback">Looks good!</div>
+      </div>
+      <button class="btn btn-success">Submit</button>
+    </form>
+    <% } %>
+    <h2>Reviews of campground</h2>
+    <% for (let r of camp.reviews){ %>
+    <div class="card mb-3">
+      <div class="card-body">
+        <p class="starability-result" data-rating="<%= r.rating %>">
+          Rated: <%= r.rating %>
+        </p>
+        <h6 class="card-subtitle mb-2 text-body-secondary">
+          Author: <%= r.author.username %>
+        </h6>
+        <p class="card-text"><%= r.body %></p>
+        <!-- hide delete button unless owner of review is logged in -->
+        <% if(currentUser && r.author.equals(currentUser._id)){ %>
+        <form
+          action="/campgrounds/<%= camp._id %>/reviews/<%= r._id %>?_method=DELETE"
+          method="POST"
+        >
+          <button class="btn btn-danger">Delete</button>
+        </form>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- creating variables to show on map -->
+<script>
+  const mapboxToken = '<%= process.env.MAPBOX_TOKEN %>';
+  const camp = <%-JSON.stringify(camp)%>;
+</script>
+<script src="/js/showMap.js"></script>
